@@ -1,5 +1,5 @@
 redis>=5.0.0
-opencv-python-headless>=4.8.0
+opencv-python>=4.8.0
 ultralytics>=8.0.0
 rich>=13.0.0
 fastapi>=0.103.0
