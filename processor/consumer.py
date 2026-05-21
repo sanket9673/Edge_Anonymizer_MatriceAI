@@ -15,7 +15,6 @@ logging.basicConfig(
 class VideoConsumer:
     def __init__(self):
         self.stream_name = STREAM_NAME
-        # Connect to Redis
         try:
             self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
             self.redis_client.ping()
@@ -24,10 +23,7 @@ class VideoConsumer:
             logging.error(f"Failed to connect to Redis: {e}")
             raise
 
-        # Initialize the AI Engine
         self.engine = AnonymizationEngine()
-        
-        # We use '$' initially to only read NEW messages that arrive after the consumer starts
         self.last_id = "0-0" 
 
     def run(self):
@@ -36,26 +32,20 @@ class VideoConsumer:
         
         try:
             while True:
-                # 1. Grab the ABSOLUTE LATEST frame from the stream (Skip the backlog)
                 messages = self.redis_client.xrevrange(self.stream_name, max='+', min='-', count=1)
-
                 if not messages:
                     continue
 
-                # 2. Extract payload
                 message_id, payload = messages[0]
                 
-                # Prevent processing the exact same frame twice
                 if message_id == self.last_id:
                     time.sleep(0.01)
                     continue
                     
                 self.last_id = message_id
 
-                # 3. Decode Base64 to Image Matrix
                 b64_frame = payload.get(b"frame")
                 if not b64_frame:
-                    logging.warning("Received message without a frame payload.")
                     continue
 
                 img_data = base64.b64decode(b64_frame.decode('utf-8'))
@@ -63,19 +53,33 @@ class VideoConsumer:
                 frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
                 if frame is not None:
-                    # 4. Pass frame to AI Anonymization Engine
-                    start_time = time.time()
-                    processed_frame = self.engine.process_frame(frame)
-                    fps = int(1.0 / (time.time() - start_time))
+                    # PASS TO COMPLIANCE ENGINE
+                    payload = self.engine.process_frame(frame)
                     
-                    # Overlay FPS on the screen
-                    cv2.putText(processed_frame, f"AI FPS: {fps}", (20, 40), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    # UNPACK ENTERPRISE SCHEMA
+                    processed_frame = payload["frame"]
+                    metadata = payload["metadata"]
+                    status = metadata["status"]
+                    redactions = metadata["redacted_count"]
+                    latency = metadata["latency_ms"]
 
-                    # 5. Display the anonymized frame
-                    cv2.imshow("Edge Anonymizer - Live Feed", processed_frame)
+                    # UI OVERLAY COLORS
+                    if status == "COMPLIANT":
+                        color = (0, 255, 0) # Green
+                    else:
+                        color = (0, 0, 255) # Red for FAIL_CLOSED
 
-                # 6. Break condition (Press 'q' to stop)
+                    # DRAW ENTERPRISE HUD
+                    cv2.putText(processed_frame, f"STATUS: {status}", (20, 40), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+                    cv2.putText(processed_frame, f"Redacted: {redactions}", (20, 75), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                    cv2.putText(processed_frame, f"AI Latency: {latency}ms", (20, 110), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+                    # DISPLAY VIDEO
+                    cv2.imshow("Matrice Enterprise Edge Anonymizer", processed_frame)
+
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
