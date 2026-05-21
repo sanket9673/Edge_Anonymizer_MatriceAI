@@ -1,0 +1,40 @@
+services:
+  redis-broker:
+    image: redis:alpine
+    container_name: redis-broker
+    ports:
+      - "6379:6379"
+    networks:
+      - edge-net
+
+  ingress-service:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.ingress
+    container_name: ingress-service
+    environment:
+      - REDIS_HOST=redis-broker
+      - REDIS_PORT=6379
+      # Point to the video file instead of webcam '0'
+      - CAMERA_RTSP_URL=sample.mp4 
+    depends_on:
+      - redis-broker
+    networks:
+      - edge-net
+
+  processor-service:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.processor
+    container_name: processor-service
+    environment:
+      - REDIS_HOST=redis-broker
+      - REDIS_PORT=6379
+    depends_on:
+      - redis-broker
+    networks:
+      - edge-net
+
+networks:
+  edge-net:
+    driver: bridge

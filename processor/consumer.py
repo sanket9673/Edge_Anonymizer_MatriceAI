@@ -77,11 +77,12 @@ class VideoConsumer:
                     cv2.putText(processed_frame, f"AI Latency: {latency}ms", (20, 110), 
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
-                    # DISPLAY VIDEO
-                    cv2.imshow("Matrice Enterprise Edge Anonymizer", processed_frame)
-
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                    # --- MODIFIED FOR DOCKER HEADLESS MODE ---
+                    # cv2.imshow("Matrice Enterprise Edge Anonymizer", processed_frame)
+                    # if cv2.waitKey(1) & 0xFF == ord('q'):
+                    #     break
+                    
+                    logging.info(f"Processed Frame | Status: {status} | Redacted: {redactions} | Latency: {latency}ms")
 
         except KeyboardInterrupt:
             logging.info("Consumer process stopped by user.")
