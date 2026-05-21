@@ -1,0 +1,31 @@
+# Python / Environments
+.env
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Mac / OS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDEs
+.vscode/
+.idea/
+
+# Ultralytics / YOLOv8
+*.pt
+runs/
+yolov8n.pt
+
+# Video Assets (Prevents large repo bloat)
+*.mp4
+*.avi
+*.mkv
+*.mov
+
+# Logs
+*.log
