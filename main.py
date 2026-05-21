@@ -4,39 +4,36 @@ from rich.live import Live
 from ui.dashboard import DashboardManager
 
 def main():
+    """
+    Main entry point for the Command Center UI.
+    Connects to Redis telemetry and updates the dashboard in real-time.
+    """
     dashboard = DashboardManager()
     
     try:
-        with Live(dashboard.render(), refresh_per_second=4, screen=True) as live:
-            # Simulate Redis connection
-            time.sleep(1.5)
-            dashboard.update_status("Redis Broker", "[bold green]Online[/bold green]")
-            dashboard.add_log("Redis Broker heartbeat detected.")
-            live.update(dashboard.render())
+        # Using Rich Live to render the layout with 10 refreshes per second
+        with Live(dashboard.render(), refresh_per_second=10, screen=True) as live:
+            dashboard.add_log("Dashboard initialized.")
+            dashboard.add_log("Listening for telemetry signals...")
             
-            # Simulate Ingress startup
-            time.sleep(1.5)
-            dashboard.update_status("Ingress Gateway", "[bold green]Online[/bold green]")
-            dashboard.add_log("Ingress Gateway listening on camera stream.")
-            live.update(dashboard.render())
-            
-            # Simulate AI Model loading
-            time.sleep(1.5)
-            dashboard.update_status("AI Processor", "[bold green]Online[/bold green]")
-            dashboard.add_log("YOLOv8 model weights loaded successfully.")
-            live.update(dashboard.render())
-            
-            dashboard.add_log("System fully operational.")
-            live.update(dashboard.render())
-            
-            # Keep the UI running
+            # Real-time polling loop
             while True:
-                time.sleep(1)
+                # 1. Fetch live telemetry data from Redis
+                dashboard.fetch_telemetry()
+                
+                # 2. Re-render the dashboard layout with new data
+                live.update(dashboard.render())
+                
+                # 3. Micro-sleep to keep CPU usage low
+                time.sleep(0.1)
                 
     except KeyboardInterrupt:
-        # Graceful exit
-        print("\n[bold red]System shutting down...[/bold red]")
+        # Clean exit on Ctrl+C
+        print("\n[bold red]Command Center shutting down...[/bold red]")
         sys.exit(0)
+    except Exception as e:
+        print(f"Critical UI Error: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
