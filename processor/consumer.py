@@ -28,7 +28,7 @@ class VideoConsumer:
         self.engine = AnonymizationEngine()
         
         # We use '$' initially to only read NEW messages that arrive after the consumer starts
-        self.last_id = "$" 
+        self.last_id = "0-0" 
 
     def run(self):
         logging.info(f"Listening for frames on Redis stream: '{self.stream_name}'...")
@@ -36,22 +36,20 @@ class VideoConsumer:
         
         try:
             while True:
-                # 1. Read from Redis Stream (blocking for 100ms max)
-                messages = self.redis_client.xread(
-                    streams={self.stream_name: self.last_id}, 
-                    count=1, 
-                    block=100
-                )
+                # 1. Grab the ABSOLUTE LATEST frame from the stream (Skip the backlog)
+                messages = self.redis_client.xrevrange(self.stream_name, max='+', min='-', count=1)
 
                 if not messages:
-                    # Stream is empty/no new frames, just loop again
                     continue
 
                 # 2. Extract payload
-                stream, records = messages[0]
-                message_id, payload = records[0]
+                message_id, payload = messages[0]
                 
-                # Update last_id to the message we just read to move forward in the stream
+                # Prevent processing the exact same frame twice
+                if message_id == self.last_id:
+                    time.sleep(0.01)
+                    continue
+                    
                 self.last_id = message_id
 
                 # 3. Decode Base64 to Image Matrix

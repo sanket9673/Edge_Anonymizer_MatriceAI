@@ -46,6 +46,9 @@ class VideoIngressProducer:
                     time.sleep(0.1)
                     continue
 
+                # SHRINK FRAME FOR FASTER AI PROCESSING
+                frame = cv2.resize(frame, (640, 480))
+
                 # 1. Compress to JPEG (Quality 70 to save bandwidth/RAM)
                 encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
                 _, buffer = cv2.imencode('.jpg', frame, encode_param)
